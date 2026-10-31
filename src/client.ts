@@ -48,11 +48,13 @@ const HOSTS: Record<Region, string> = {
 
 export class NuvemshopClient {
   readonly baseUrl: string;
+  private readonly versioned: boolean;
   private readonly opts: Required<Omit<ClientOptions, "region" | "apiVersion">>;
 
   constructor(options: ClientOptions) {
     if (!options.userAgent) throw new Error("userAgent é obrigatório (ex.: 'Meu App (contato@meuapp.com)')");
     this.baseUrl = `${HOSTS[options.region ?? "br"]}/${options.apiVersion ?? "v1"}/${options.storeId}`;
+    this.versioned = (options.apiVersion ?? "v1") !== "v1";
     this.opts = {
       storeId: options.storeId,
       accessToken: options.accessToken,
@@ -77,6 +79,8 @@ export class NuvemshopClient {
         method,
         headers: {
           Authentication: `bearer ${this.opts.accessToken}`,
+          // As versões datadas (ex.: 2025-03) documentam o cabeçalho padrão `Authorization`.
+          ...(this.versioned ? { Authorization: `Bearer ${this.opts.accessToken}` } : {}),
           "User-Agent": this.opts.userAgent,
           ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
         },

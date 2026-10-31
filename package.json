@@ -1,6 +1,6 @@
 {
   "name": "nuvemshop-kit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Kit em TypeScript para criar apps da Nuvemshop/Tiendanube: cliente da API com paginação e retry, OAuth, verificação de webhooks e handlers LGPD.",
   "license": "MIT",
   "type": "module",

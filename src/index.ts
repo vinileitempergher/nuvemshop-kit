@@ -6,3 +6,5 @@ export { verifyWebhook, createLgpdHandler, LGPD_EVENTS, SIGNATURE_HEADER } from 
 export type { WebhookEvent, LgpdEvent, LgpdHandlers, StoreRedactPayload, CustomersRedactPayload, CustomersDataRequestPayload } from "./webhooks.js";
 export { resources } from "./resources.js";
 export type { Coupon, CouponInput, Order, Webhook, Script, Product, I18n } from "./resources.js";
+export { billing, billingTransition, APP_COST, BILLING_EVENTS } from "./billing.js";
+export type { Subscription, SubscriptionUpdate, ChargeInput, AppSubscriptionUpdated, BillingStatus } from "./billing.js";

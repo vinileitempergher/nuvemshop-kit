@@ -15,6 +15,7 @@ Não existe um SDK oficial em Node para a API REST da Nuvemshop, então quem cri
 | `authorizeUrl` / `exchangeCode` | Fluxo OAuth (authorization code) para instalar o app e obter o token da loja |
 | `verifyWebhook` | Validação do `x-linkedstore-hmac-sha256` (HMAC-SHA256 do corpo bruto com o client secret), com comparação em tempo constante |
 | `createLgpdHandler` | Um handler para `store/redact`, `customers/redact` e `customers/data_request` |
+| `billing()` / `billingTransition` | Billing API (assinatura do app, troca de plano, cobranças extras) e tradução de `app/suspended`, `app/resumed` e `app_subscription/updated` na situação da assinatura |
 
 ## Instalação
 
@@ -82,6 +83,21 @@ const lgpd = createLgpdHandler(process.env.APP_SECRET!, {
 
 Veja um servidor completo, sem dependências, em [`examples/server.ts`](examples/server.ts).
 
+### Cobrança pela Nuvemshop (Billing API)
+
+A assinatura é criada pela própria Nuvemshop quando o lojista instala um app com mensalidade configurada no Portal de Parceiros. O app só precisa saber se a loja está em dia:
+
+```ts
+import { NuvemshopClient, billing, billingTransition } from "nuvemshop-kit";
+
+// No webhook: app/suspended, app/resumed e app_subscription/updated
+const change = billingTransition(evento); // { status: "suspended" } | { status: "active" } | ...
+
+// Consulta (só existe nas versões datadas da API, não na v1)
+const c = new NuvemshopClient({ storeId, accessToken, userAgent, apiVersion: "2025-03" });
+const assinatura = await billing(c, APP_ID).subscription(); // next_execution, amount_value, plan
+```
+
 ## Desenvolvimento
 
 ```bash
@@ -95,7 +111,7 @@ npm run build   # gera dist/
 - [x] Cliente com paginação e retry
 - [x] OAuth
 - [x] Verificação de webhooks + handlers LGPD
-- [ ] Billing API (cobrança de apps)
+- [x] Billing API (cobrança de apps)
 - [ ] Mais recursos tipados (clientes, categorias, variantes, estoque)
 - [ ] Publicação no npm
 

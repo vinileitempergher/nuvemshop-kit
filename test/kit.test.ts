@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { NuvemshopClient, NuvemshopError, nextLink, authorizeUrl, exchangeCode, verifyWebhook, createLgpdHandler, resources } from "../src/index.js";
+import { NuvemshopClient, NuvemshopError, nextLink, authorizeUrl, exchangeCode, verifyWebhook, createLgpdHandler, resources, billing, billingTransition } from "../src/index.js";
 
 type Call = { url: string; init: RequestInit };
 function fakeFetch(responses: Array<{ status?: number; body?: unknown; headers?: Record<string, string> }>) {
@@ -99,4 +99,24 @@ test("webhooks.ensure não duplica inscrições existentes", async () => {
   const out = await r.webhooks.ensure([{ event: "order/paid", url: "https://app/x" }, { event: "order/cancelled", url: "https://app/x" }]);
   assert.deepEqual(out.map((w) => w.id), [1, 2]);
   assert.equal(calls.filter((c) => c.init.method === "POST").length, 1);
+});
+
+test("billing usa a versão datada, app-cost e o cabeçalho Authorization", async () => {
+  const { f, calls } = fakeFetch([{ body: { amount_value: 49, next_execution: "2026-11-16" } }, { body: { ok: true } }]);
+  const c = new NuvemshopClient({ ...base, apiVersion: "2025-03", fetch: f });
+  const b = billing(c, 49763);
+  const s = await b.subscription();
+  assert.equal(s.next_execution, "2026-11-16");
+  assert.equal(calls[0].url, "https://api.nuvemshop.com.br/2025-03/789/concepts/app-cost/services/49763/subscriptions");
+  assert.equal((calls[0].init.headers as Record<string, string>).Authorization, "Bearer tok");
+  await b.createCharge({ description: "Extra", from_date: "2026-11-01", to_date: "2026-11-16", amount_value: 10, amount_currency: "BRL" });
+  assert.equal(JSON.parse(String(calls[1].init.body)).concept_code, "app-cost");
+});
+
+test("billingTransition traduz os eventos de cobrança", () => {
+  assert.deepEqual(billingTransition({ event: "app/suspended" }), { status: "suspended" });
+  assert.deepEqual(billingTransition({ event: "app/resumed" }), { status: "active" });
+  assert.deepEqual(billingTransition({ event: "app_subscription/updated", topic: "churn" }), { status: "churned" });
+  assert.deepEqual(billingTransition({ event: "app_subscription/updated", topic: "plan_changed", plan: { code: "pro" } }), { planCode: "pro" });
+  assert.equal(billingTransition({ event: "order/paid" }), null);
 });
